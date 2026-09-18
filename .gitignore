@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+# deneme fotoğrafları depoya girmesin
+test/
+*.heic
+*.HEIC
+*.heif
+*.jpg
+*.jpeg
+*.png
