@@ -30,6 +30,11 @@ for _akis in (sys.stdout, sys.stderr):
 UZANTILAR = {".heic", ".heif", ".hif"}
 
 
+def tara(kok: Path) -> list[Path]:
+    """Klasördeki (alt klasörler dahil) HEIC/HEIF dosyalarını sıralı döndürür."""
+    return sorted(f for f in kok.rglob("*") if f.is_file() and f.suffix.lower() in UZANTILAR)
+
+
 def hedef_yol(kaynak: Path, kok: Path, cikti: Path | None, uzanti: str) -> Path:
     if cikti is None:
         return kaynak.with_suffix(uzanti)
@@ -74,7 +79,7 @@ def main() -> int:
         return 2
     uzanti = ".jpg" if a.format == "jpeg" else ".png"
 
-    dosyalar = sorted(f for f in kok.rglob("*") if f.is_file() and f.suffix.lower() in UZANTILAR)
+    dosyalar = tara(kok)
     if not dosyalar:
         print("HEIC/HEIF dosyası bulunamadı.")
         return 0
