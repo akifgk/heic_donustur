@@ -15,10 +15,18 @@ from tkinter import filedialog, messagebox, ttk
 
 import heic_donustur as cekirdek
 
+try:
+    from tkinterdnd2 import DND_FILES, TkinterDnD
+    _Pencere = TkinterDnD.Tk
+    DND_VAR = True
+except ImportError:  # paket yoksa arayüz yine açılır, sadece sürükle-bırak olmaz
+    _Pencere = tk.Tk
+    DND_VAR = False
+
 BASLIK = "HEIC Dönüştürücü"
 
 
-class Uygulama(tk.Tk):
+class Uygulama(_Pencere):
     def __init__(self) -> None:
         super().__init__()
         self.title(BASLIK)
@@ -33,11 +41,16 @@ class Uygulama(tk.Tk):
         self.fmt = tk.StringVar(value="jpeg")
         self.kalite = tk.IntVar(value=92)
         self.cikti = tk.StringVar(value="")
+        self.cikti_modu = tk.StringVar(value="yanina")   # yanina | yeni | secili
+        self.yeni_klasor_adi = tk.StringVar(value="Donusturulmus")
         self.sil = tk.BooleanVar(value=False)
         self.zorla = tk.BooleanVar(value=False)
         self.kaynak_metin = tk.StringVar(value="Henüz seçim yok")
 
         self._kur()
+        if DND_VAR:
+            self.drop_target_register(DND_FILES)
+            self.dnd_bind("<<Drop>>", self._birakildi)
         self.after(100, self._kuyrugu_bosalt)
 
     # ----- arayüz kurulumu -----------------------------------------------
@@ -49,10 +62,15 @@ class Uygulama(tk.Tk):
         # Kaynak
         kutu = ttk.LabelFrame(ana, text="Kaynak", padding=8)
         kutu.pack(fill="x", **pad)
-        ttk.Button(kutu, text="Klasör seç...", command=self._klasor_sec).pack(side="left")
-        ttk.Button(kutu, text="Dosya seç...", command=self._dosya_sec).pack(side="left", padx=(6, 0))
-        ttk.Button(kutu, text="Temizle", command=self._temizle).pack(side="left", padx=(6, 0))
-        ttk.Label(kutu, textvariable=self.kaynak_metin, foreground="#555").pack(side="left", padx=12)
+        satir = ttk.Frame(kutu)
+        satir.pack(fill="x")
+        ttk.Button(satir, text="Klasör seç...", command=self._klasor_sec).pack(side="left")
+        ttk.Button(satir, text="Dosya seç...", command=self._dosya_sec).pack(side="left", padx=(6, 0))
+        ttk.Button(satir, text="Temizle", command=self._temizle).pack(side="left", padx=(6, 0))
+        ttk.Label(satir, textvariable=self.kaynak_metin, foreground="#555").pack(side="left", padx=12)
+        ttk.Label(kutu, text="Klasörü ya da dosyaları bu pencereye sürükleyip bırakabilirsin."
+                  if DND_VAR else "Sürükle-bırak için: pip install tkinterdnd2",
+                  foreground="#777").pack(anchor="w", pady=(6, 0))
 
         # Ayarlar
         kutu = ttk.LabelFrame(ana, text="Ayarlar", padding=8)
@@ -68,14 +86,25 @@ class Uygulama(tk.Tk):
         self.kalite_kutu = ttk.Spinbox(satir, from_=50, to=100, width=5, textvariable=self.kalite)
         self.kalite_kutu.pack(side="left", padx=(4, 0))
 
+        ttk.Separator(kutu).pack(fill="x", pady=8)
+        ttk.Label(kutu, text="Nereye kaydedilsin?").pack(anchor="w")
         satir = ttk.Frame(kutu)
-        satir.pack(fill="x", pady=(6, 0))
-        ttk.Label(satir, text="Çıktı klasörü:").pack(side="left")
+        satir.pack(fill="x", pady=(2, 0))
+        ttk.Radiobutton(satir, text="Orijinalin yanına", variable=self.cikti_modu,
+                        value="yanina").pack(side="left")
+        satir = ttk.Frame(kutu)
+        satir.pack(fill="x", pady=(2, 0))
+        ttk.Radiobutton(satir, text="Kaynak klasörün içinde yeni klasöre:", variable=self.cikti_modu,
+                        value="yeni").pack(side="left")
+        ttk.Entry(satir, textvariable=self.yeni_klasor_adi, width=24).pack(side="left", padx=6)
+        ttk.Label(satir, text="(yoksa oluşturulur, alt klasör yapısı korunur)",
+                  foreground="#777").pack(side="left")
+        satir = ttk.Frame(kutu)
+        satir.pack(fill="x", pady=(2, 0))
+        ttk.Radiobutton(satir, text="Şu klasöre:", variable=self.cikti_modu,
+                        value="secili").pack(side="left")
         ttk.Entry(satir, textvariable=self.cikti).pack(side="left", fill="x", expand=True, padx=6)
         ttk.Button(satir, text="Seç...", command=self._cikti_sec).pack(side="left")
-        ttk.Button(satir, text="Yanına yaz", command=lambda: self.cikti.set("")).pack(side="left", padx=(4, 0))
-        ttk.Label(kutu, text="Boş bırakılırsa her dosya orijinalinin yanına yazılır.",
-                  foreground="#777").pack(anchor="w", pady=(2, 0))
 
         satir = ttk.Frame(kutu)
         satir.pack(fill="x", pady=(6, 0))
@@ -130,6 +159,38 @@ class Uygulama(tk.Tk):
         self.kok = Path(os.path.commonpath([str(p.parent) for p in self.kaynaklar]))
         self._kaynak_guncelle("seçili dosyalar")
 
+    def _birakildi(self, event) -> None:
+        """Pencereye bırakılan klasör/dosyaları kaynağa ekler."""
+        yollar = [Path(y) for y in self.tk.splitlist(event.data)]
+        klasorler = [y for y in yollar if y.is_dir()]
+        dosyalar = [y for y in yollar if y.is_file() and y.suffix.lower() in cekirdek.UZANTILAR]
+        if klasorler and not dosyalar and len(klasorler) == 1:
+            self.kok = klasorler[0]
+            self.kaynaklar = cekirdek.tara(self.kok)
+            self._kaynak_guncelle(str(self.kok))
+            return
+        for k in klasorler:
+            dosyalar.extend(cekirdek.tara(k))
+        if not dosyalar:
+            self._yaz("Bırakılanlar arasında HEIC/HEIF yok.", "hata")
+            return
+        self.kaynaklar = sorted(set(self.kaynaklar) | set(dosyalar))
+        self.kok = Path(os.path.commonpath([str(p.parent) for p in self.kaynaklar]))
+        self._kaynak_guncelle("bırakılan öğeler")
+
+    def _cikti_coz(self) -> Path | None:
+        """Seçilen moda göre çıktı klasörünü döndürür; None = orijinalin yanı."""
+        mod = self.cikti_modu.get()
+        if mod == "yanina":
+            return None
+        if mod == "yeni":
+            ad = self.yeni_klasor_adi.get().strip() or "Donusturulmus"
+            # kaynak klasörün içine açılır; tarama yalnızca HEIC aradığı için çıktılar
+            # ikinci koşuda kaynağa karışmaz
+            return self.kok / ad if self.kok else None
+        yol = self.cikti.get().strip()
+        return Path(yol) if yol else None
+
     def _temizle(self) -> None:
         self.kaynaklar, self.kok = [], None
         self.kaynak_metin.set("Henüz seçim yok")
@@ -154,12 +215,15 @@ class Uygulama(tk.Tk):
         if not self.kaynaklar:
             messagebox.showinfo(BASLIK, "Önce bir klasör ya da dosya seç.")
             return
+        if self.cikti_modu.get() == "secili" and not self.cikti.get().strip():
+            messagebox.showinfo(BASLIK, "Çıktı klasörünü seç ya da başka bir kayıt yeri işaretle.")
+            return
         if self.sil.get() and not dene:
             if not messagebox.askyesno(BASLIK, "Orijinal HEIC dosyaları çevrildikten sonra SİLİNECEK.\nEmin misin?"):
                 return
         ayar = dict(
             fmt=self.fmt.get(), kalite=int(self.kalite.get()),
-            cikti=Path(self.cikti.get()) if self.cikti.get().strip() else None,
+            cikti=self._cikti_coz(),
             sil=self.sil.get(), zorla=self.zorla.get(), dene=dene,
         )
         self.calisiyor = True
@@ -168,7 +232,8 @@ class Uygulama(tk.Tk):
             d.configure(state="disabled")
         self.iptal_dugme.configure(state="normal")
         self.ilerleme.configure(maximum=len(self.kaynaklar), value=0)
-        self._yaz(("-- DENEME -- " if dene else "-- BAŞLADI -- ") + f"{len(self.kaynaklar)} dosya", "soluk")
+        self._yaz(("-- DENEME -- " if dene else "-- BAŞLADI -- ") + f"{len(self.kaynaklar)} dosya"
+                  + (f"  ->  {ayar['cikti']}" if ayar["cikti"] else "  ->  orijinallerin yanına"), "soluk")
         threading.Thread(target=self._isci, args=(list(self.kaynaklar), self.kok, ayar), daemon=True).start()
 
     def _isci(self, dosyalar: list[Path], kok: Path, a: dict) -> None:
