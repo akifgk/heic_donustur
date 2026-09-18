@@ -9,3 +9,6 @@ test/
 *.jpg
 *.jpeg
 *.png
+build/
+dist/
+*.spec

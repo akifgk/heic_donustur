@@ -1,0 +1,2 @@
+pillow>=10
+pillow-heif>=1.0
