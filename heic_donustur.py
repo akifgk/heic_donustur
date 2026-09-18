@@ -23,9 +23,11 @@ import pillow_heif
 
 pillow_heif.register_heif_opener()
 
-# Windows konsolu cp1254 olabilir; Türkçe çıktı kırılmasın
+# Windows konsolu cp1254 olabilir; Türkçe çıktı kırılmasın. Pencereli exe'de (pyinstaller
+# --windowed) konsol yoktur, akışlar None gelir; o durumda dokunma.
 for _akis in (sys.stdout, sys.stderr):
-    _akis.reconfigure(errors="replace")
+    if _akis is not None and hasattr(_akis, "reconfigure"):
+        _akis.reconfigure(errors="replace")
 
 UZANTILAR = {".heic", ".heif", ".hif"}
 
