@@ -3,11 +3,23 @@
 iPhone'dan PC'ye aktarılan HEIC/HEIF fotoğrafları toplu olarak JPEG veya PNG'ye çevirir.
 EXIF (çekim tarihi, konum), yön bilgisi ve dosya tarihi korunur.
 
+## İndir ve kullan (Windows)
+
+1. [Releases](https://github.com/akifgk/heic_donustur/releases/latest) sayfasından `HEIC-Donustur.exe` dosyasını indir.
+2. Çift tıkla çalıştır. Kurulum ya da Python gerekmez.
+3. Fotoğrafları ya da klasörü pencereye sürükle-bırak, "Dönüştür"e bas.
+
+Windows "Bilinmeyen yayıncı" (SmartScreen) uyarısı gösterebilir: program imzalı değil. "Ek bilgi" →
+"Yine de çalıştır" ile açılır. Bazı antivirüsler PyInstaller ile paketlenmiş programlara yanlış alarm
+verebilir; kaynak kodu bu depoda açık, istersen aşağıdaki gibi kendin derleyebilirsin.
+
+## Geliştiriciler için
+
 - `heic_donustur.py` — çekirdek + komut satırı (`python heic_donustur.py KLASOR --dene`)
 - `arayuz.py` — Tkinter arayüzü (`python arayuz.py`)
 - `derle.bat` — PyInstaller ile `dist\HEIC-Donustur.exe` üretir
 
-Arayüz:
+## Arayüz
 - Fotoğrafları ya da klasörü pencereye sürükle-bırak, ya da "Klasör ekle" / "Dosya ekle".
 - Her dosyanın durumu listede görünür (Bekliyor, Çevrildi, Atlandı, Hata).
 - Listeden bir satır seçince önizleme açılır: yönü düzeltilmiş resim, piksel boyutu, çekim
@@ -18,4 +30,10 @@ Arayüz:
 - Ayarlar (biçim, kalite, kayıt yeri) `%APPDATA%\HEIC-Donustur\ayarlar.json` içinde hatırlanır;
   Geri Dönüşüm seçeneği bilerek hatırlanmaz.
 
-Gereksinim: Python 3.12, `pip install pillow pillow-heif tkinterdnd2`.
+## Kaynaktan çalıştırma
+
+Gereksinim: Python 3.12, `pip install -r requirements.txt`.
+
+## Lisans
+
+[MIT](LICENSE)
